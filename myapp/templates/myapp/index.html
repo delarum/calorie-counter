@@ -1,0 +1,180 @@
+{% extends "myapp/base.html" %}
+
+{% block title %}CalTrack — {{ today }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero stats row ───────────────────────────────────────────── -->
+<section class="mb-8">
+  <p class="text-xs font-mono-custom text-zinc-500 uppercase tracking-widest mb-1">Today's total</p>
+
+  <div class="flex items-end gap-3 mb-4">
+    <span class="font-display text-6xl font-extrabold leading-none text-white">
+      {{ total_calories }}
+    </span>
+    <span class="text-zinc-400 text-lg mb-2">/ {{ daily_goal }} kcal</span>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+    <div class="progress-fill h-full rounded-full
+      {% if progress_pct >= 100 %}bg-red-500{% elif progress_pct >= 80 %}bg-yellow-400{% else %}bg-lime-400{% endif %}"
+      style="width: {{ progress_pct }}%"></div>
+  </div>
+  <div class="flex justify-between mt-1 text-xs font-mono-custom text-zinc-600">
+    <span>0</span>
+    <span>
+      {% if progress_pct >= 100 %}
+        <span class="text-red-400">Limit reached</span>
+      {% else %}
+        {{ daily_goal|add:"-"|add:total_calories }} kcal remaining
+      {% endif %}
+    </span>
+    <span>{{ daily_goal }}</span>
+  </div>
+</section>
+
+<!-- ── Add food form ─────────────────────────────────────────────── -->
+<section class="mb-8">
+  <h2 class="font-display text-lg font-bold mb-3 text-zinc-200">Add Food Item</h2>
+
+  <form method="post" action="{% url 'index' %}">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="text-red-400 text-sm mb-3">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="flex flex-col sm:flex-row gap-3">
+
+      <!-- Food name -->
+      <div class="flex-1">
+        <label for="{{ form.name.id_for_label }}"
+               class="block text-xs text-zinc-500 mb-1 font-mono-custom uppercase tracking-wider">
+          Food Name
+        </label>
+        <input type="text"
+               name="{{ form.name.html_name }}"
+               id="{{ form.name.id_for_label }}"
+               value="{{ form.name.value|default:'' }}"
+               placeholder="e.g. Oatmeal with berries"
+               autocomplete="off"
+               class="input-glow w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3
+                      text-zinc-100 placeholder-zinc-600 text-sm transition-colors
+                      hover:border-zinc-600" />
+        {% if form.name.errors %}
+        <p class="text-red-400 text-xs mt-1">{{ form.name.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <!-- Calories -->
+      <div class="w-full sm:w-32">
+        <label for="{{ form.calories.id_for_label }}"
+               class="block text-xs text-zinc-500 mb-1 font-mono-custom uppercase tracking-wider">
+          kcal
+        </label>
+        <input type="number"
+               name="{{ form.calories.html_name }}"
+               id="{{ form.calories.id_for_label }}"
+               value="{{ form.calories.value|default:'' }}"
+               placeholder="350"
+               min="1" max="9999"
+               class="input-glow w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3
+                      text-zinc-100 placeholder-zinc-600 text-sm font-mono-custom transition-colors
+                      hover:border-zinc-600" />
+        {% if form.calories.errors %}
+        <p class="text-red-400 text-xs mt-1">{{ form.calories.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <!-- Submit -->
+      <div class="flex items-end">
+        <button type="submit"
+                class="w-full sm:w-auto bg-lime-400 hover:bg-lime-300 text-zinc-900
+                       font-bold text-sm px-6 py-3 rounded-lg transition-colors
+                       font-display tracking-wide">
+          + Add
+        </button>
+      </div>
+
+    </div>
+  </form>
+</section>
+
+<!-- ── Food items list ───────────────────────────────────────────── -->
+<section>
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-display text-lg font-bold text-zinc-200">
+      Today's Log
+      {% if food_items %}
+      <span class="ml-2 text-xs font-mono-custom font-normal text-zinc-500 bg-zinc-800 rounded-full px-2 py-0.5">
+        {{ food_items|length }} item{{ food_items|length|pluralize }}
+      </span>
+      {% endif %}
+    </h2>
+
+    {% if food_items %}
+    <form method="post" action="{% url 'reset_log' %}"
+          onsubmit="return confirm('Reset today\'s log? This cannot be undone.')">
+      {% csrf_token %}
+      <button type="submit"
+              class="text-xs text-zinc-500 hover:text-red-400 border border-zinc-700
+                     hover:border-red-800 rounded-lg px-3 py-1.5 transition-colors font-mono-custom">
+        Reset day
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if food_items %}
+  <div class="rounded-xl border border-zinc-800 overflow-hidden divide-y divide-zinc-800">
+    {% for item in food_items %}
+    <div class="food-row flex items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="w-2 h-2 rounded-full bg-lime-400 shrink-0 opacity-60"></span>
+        <span class="text-sm text-zinc-200 truncate">{{ item.name }}</span>
+      </div>
+      <div class="flex items-center gap-4 shrink-0 ml-4">
+        <span class="font-mono-custom text-sm font-medium text-lime-400">
+          {{ item.calories }} kcal
+        </span>
+        <form method="post" action="{% url 'delete_food_item' item.id %}">
+          {% csrf_token %}
+          <button type="submit"
+                  title="Remove {{ item.name }}"
+                  class="btn-delete text-zinc-600 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Total row -->
+    <div class="flex items-center justify-between px-4 py-3 bg-zinc-800/60">
+      <span class="text-xs font-mono-custom text-zinc-400 uppercase tracking-widest">Total</span>
+      <span class="font-display font-bold text-white font-mono-custom text-base">
+        {{ total_calories }} kcal
+      </span>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Empty state -->
+  <div class="rounded-xl border border-dashed border-zinc-700 px-6 py-14 text-center">
+    <div class="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+      <svg class="w-6 h-6 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+      </svg>
+    </div>
+    <p class="text-zinc-500 text-sm">No food items yet today.</p>
+    <p class="text-zinc-600 text-xs mt-1">Add your first meal above to start tracking.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}
