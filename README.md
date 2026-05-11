@@ -113,7 +113,7 @@ Visit **http://127.0.0.1:8000** in your browser.
 
 ### Live URL
 
-> 🔗 **https://calorie-tracker.onrender.com** ← replace with your actual URL after deploying
+> 🔗 **https://calorie-counter-0edr.onrender.com** 
 
 ---
 
@@ -156,3 +156,10 @@ calorie-tracker/
 ## License
 
 MIT
+
+
+## known bugs
+None
+ ## Support nad Contact information
+ **email:** delarum7@gmail.com
+ **Phone number:** 0792651083
